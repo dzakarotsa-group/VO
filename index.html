@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VO Studio Pro — Dubbing AI Indonesia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --red: #FF2D55;
+    --red-dark: #CC1E3E;
+    --red-glow: rgba(255,45,85,0.18);
+    --bg: #0E0E10;
+    --bg2: #161618;
+    --bg3: #1E1E22;
+    --bg4: #26262C;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #F2F2F4;
+    --text2: #9898A6;
+    --text3: #5A5A6A;
+    --green: #00D68F;
+    --amber: #FFB830;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  /* GRID LINES */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* GLOW TOP */
+  .glow-top {
+    position: fixed; top: -120px; left: 50%; transform: translateX(-50%);
+    width: 700px; height: 300px;
+    background: radial-gradient(ellipse, rgba(255,45,85,0.12) 0%, transparent 70%);
+    z-index: 0; pointer-events: none;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 10px; }
+
+  /* LAYOUT */
+  .wrapper { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+  /* HEADER */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(14,14,16,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+  }
+  .header-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-head); font-size: 18px; font-weight: 800;
+    letter-spacing: -0.02em; color: var(--text);
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 34px; height: 34px; background: var(--red);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 16px var(--red-glow);
+  }
+  .logo-icon svg { width: 18px; height: 18px; }
+  .logo span { color: var(--red); }
+  .badge-beta {
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text2); font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 20px; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .btn-settings {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text2); padding: 7px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-family: var(--font-body);
+    transition: all 0.2s;
+  }
+  .btn-settings:hover { border-color: var(--red); color: var(--text); }
+  .api-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text3);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+  .dot.green { background: var(--green); box-shadow: 0 0 8px rgba(0,214,143,0.5); }
+
+  /* HERO */
+  .hero {
+    padding: 48px 0 32px;
+    text-align: center;
+  }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,45,85,0.1); border: 1px solid rgba(255,45,85,0.25);
+    color: var(--red); font-size: 11px; font-weight: 600;
+    padding: 5px 12px; border-radius: 20px; letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--font-head); font-size: clamp(32px,5vw,56px);
+    font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;
+    margin-bottom: 14px;
+  }
+  .hero h1 em { font-style: normal; color: var(--red); }
+  .hero p { color: var(--text2); font-size: 16px; max-width: 480px; margin: 0 auto; }
+
+  /* MAIN APP */
+  .app-shell {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 60px;
+    box-shadow: 0 0 60px rgba(0,0,0,0.4), 0 0 0 1px var(--border);
+  }
+
+  /* APP TOOLBAR */
+  .app-toolbar {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toolbar-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .td-red { background: #FF5F57; }
+  .td-yellow { background: #FEBC2E; }
+  .td-green { background: #28C840; }
+  .toolbar-title {
+    flex: 1; text-align: center; font-size: 12px; color: var(--text3);
+    font-weight: 500; letter-spacing: 0.04em;
+  }
+
+  /* APP BODY */
+  .app-body { display: flex; min-height: 560px; }
+
+  /* LEFT PANEL */
+  .panel-left {
+    flex: 1; display: flex; flex-direction: column;
+    border-right: 1px solid var(--border);
+    min-width: 0;
+  }
+  .panel-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-header-icon {
+    width: 28px; height: 28px; background: var(--bg4);
+    border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .panel-label {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .char-count { margin-left: auto; font-size: 11px; color: var(--text3); }
+
+  textarea#scriptText {
+    flex: 1; width: 100%; background: transparent; border: none;
+    color: var(--text); font-family: var(--font-body); font-size: 15px;
+    line-height: 1.7; padding: 20px; resize: none; outline: none;
+    min-height: 300px;
+  }
+  textarea#scriptText::placeholder { color: var(--text3); }
+
+  .preset-bar {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .preset-label { font-size: 11px; color: var(--text3); font-weight: 500; white-space: nowrap; }
+  .preset-chip {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text2); font-size: 12px; padding: 4px 10px;
+    border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    font-family: var(--font-body); white-space: nowrap;
+  }
+  .preset-chip:hover { border-color: var(--red); color: var(--text); }
+
+  /* RIGHT PANEL */
+  .panel-right {
+    width: 320px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    background: var(--bg2);
+  }
+  .settings-scroll {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  /* CONTROL GROUP */
+  .ctrl-group { display: flex; flex-direction: column; gap: 7px; }
+  .ctrl-label {
+    font-size: 11px; font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  /* SELECT */
+  .styled-select {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); padding: 10px 14px; border-radius: 10px;
+    font-size: 13px; font-weight: 500; font-family: var(--font-body);
+    cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%235A5A6A' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    transition: border-color 0.2s;
+  }
+  .styled-select:focus { outline: none; border-color: var(--red); }
+  .styled-select option { background: var(--bg3); }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 3px; gap: 2px;
+  }
+  .tgl {
+    flex: 1; padding: 8px 4px; background: transparent; border: none;
+    color: var(--text3); font-size: 12px; font-weight: 500;
+    cursor: pointer; border-radius: 7px; transition: all 0.15s;
+    font-family: var(--font-body);
+  }
+  .tgl:hover { color: var(--text2); }
+  .tgl.on { background: var(--bg4); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+  /* VOICE PREVIEW */
+  .voice-preview {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .voice-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--red), var(--red-dark));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .voice-info p { font-size: 13px; font-weight: 600; color: var(--text); }
+  .voice-info span { font-size: 11px; color: var(--text3); }
+
+  /* GENERATE BTN */
+  .gen-area {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .btn-generate {
+    width: 100%; padding: 14px; background: var(--red);
+    color: white; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 700; font-family: var(--font-head);
+    letter-spacing: 0.01em; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(255,45,85,0.3);
+    position: relative; overflow: hidden;
+  }
+  .btn-generate::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .btn-generate:hover::before { opacity: 1; }
+  .btn-generate:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(255,45,85,0.4); }
+  .btn-generate:active { transform: translateY(0); }
+  .btn-generate:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; box-shadow: none; }
+
+  /* ERROR */
+  .error-msg {
+    display: none; background: rgba(255,45,85,0.08);
+    border: 1px solid rgba(255,45,85,0.25);
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 12px; color: #FF6B85; line-height: 1.5;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .error-msg.hidden { display: none !important; }
+
+  /* AUDIO RESULT */
+  .audio-result {
+    display: none;
+    background: var(--bg3); border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    animation: slideUp 0.3s ease;
+  }
+  .audio-result.show { display: block; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .audio-result-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .success-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,214,143,0.1); border: 1px solid rgba(0,214,143,0.2);
+    color: var(--green); font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .audio-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  audio {
+    flex: 1; height: 36px;
+    filter: invert(1) hue-rotate(180deg) brightness(0.85);
+    border-radius: 8px;
+  }
+  .btn-dl {
+    background: var(--bg4); border: 1px solid var(--border2);
+    color: var(--text); padding: 8px 14px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-body); transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-dl:hover { border-color: var(--green); color: var(--green); }
+  .btn-close-audio {
+    background: var(--bg4); border: 1px solid var(--border);
+    color: var(--text3); width: 34px; height: 34px; border-radius: 8px;
+    cursor: pointer; font-size: 16px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-close-audio:hover { color: var(--text); border-color: var(--border2); }
+
+  /* SPINNER */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 0.7s linear infinite; }
+
+  /* MODAL SETTINGS */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 20px; width: 100%; max-width: 480px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    animation: modalIn 0.25s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title {
+    font-family: var(--font-head); font-size: 18px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-modal-close {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text2); width: 30px; height: 30px; border-radius: 7px;
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-modal-close:hover { border-color: var(--red); color: var(--red); }
+  .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+
+  .form-group { display: flex; flex-direction: column; gap: 7px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+  .form-input {
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); padding: 11px 14px; border-radius: 10px;
+    font-size: 13px; font-family: var(--font-mono, monospace);
+    width: 100%; transition: border-color 0.2s;
+  }
+  .form-input:focus { outline: none; border-color: var(--red); }
+  .form-hint { font-size: 11px; color: var(--text3); line-height: 1.5; }
+  .form-hint a { color: var(--red); text-decoration: none; }
+  .form-hint a:hover { text-decoration: underline; }
+
+  .btn-save {
+    flex: 1; padding: 11px; background: var(--red); color: white;
+    border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: var(--font-body); transition: all 0.2s;
+  }
+  .btn-save:hover { background: var(--red-dark); }
+  .btn-cancel {
+    padding: 11px 20px; background: var(--bg3); color: var(--text2);
+    border: 1px solid var(--border); border-radius: 10px; font-size: 14px;
+    cursor: pointer; font-family: var(--font-body); transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--border2); color: var(--text); }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); padding: 10px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 500; z-index: 9999;
+    transition: transform 0.3s ease; pointer-events: none;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success .dot { background: var(--green); box-shadow: 0 0 8px rgba(0,214,143,0.5); width: 7px; height: 7px; border-radius: 50%; }
+
+  /* HISTORY */
+  .history-section {
+    padding: 0 0 60px;
+  }
+  .section-title {
+    font-family: var(--font-head); font-size: 20px; font-weight: 700;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title span { font-size: 13px; font-weight: 400; color: var(--text3); font-family: var(--font-body); }
+  .history-grid { display: flex; flex-direction: column; gap: 8px; }
+  .history-item {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; transition: border-color 0.2s;
+  }
+  .history-item:hover { border-color: var(--border2); }
+  .history-num {
+    width: 28px; height: 28px; background: var(--bg3);
+    border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text3); flex-shrink: 0;
+  }
+  .history-text { flex: 1; min-width: 0; }
+  .history-text p { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-text span { font-size: 11px; color: var(--text3); }
+  .history-play {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text2); width: 32px; height: 32px; border-radius: 8px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; font-size: 12px;
+  }
+  .history-play:hover { border-color: var(--red); color: var(--red); }
+  .history-dl {
+    background: transparent; border: none;
+    color: var(--text3); cursor: pointer; font-size: 14px; padding: 4px;
+    transition: color 0.15s;
+  }
+  .history-dl:hover { color: var(--green); }
+  .empty-history {
+    text-align: center; padding: 40px 20px;
+    color: var(--text3); font-size: 13px;
+  }
+  .empty-history span { display: block; font-size: 32px; margin-bottom: 10px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px;
+    text-align: center;
+    color: var(--text3); font-size: 12px;
+  }
+  footer a { color: var(--red); text-decoration: none; }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    .app-body { flex-direction: column; }
+    .panel-right { width: 100%; border-top: 1px solid var(--border); }
+    .hero { padding: 32px 0 20px; }
+    .hero h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-top"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>
+      </div>
+      VO <span>Studio</span> Pro
+    </a>
+    <div class="badge-beta">v1.0</div>
+    <div class="header-right">
+      <div class="api-status">
+        <div class="dot" id="statusDot"></div>
+        <span id="statusText">API Belum Diset</span>
+      </div>
+      <button class="btn-settings" onclick="openSettings()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Pengaturan API
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="wrapper">
+  <div class="hero">
+    <div class="hero-tag">⚡ Powered by Gemini 2.5 Flash TTS</div>
+    <h1>Dubbing AI<br><em>Bahasa Indonesia</em></h1>
+    <p>Ubah teks menjadi suara natural dengan 14 karakter suara dan 10 gaya bicara.</p>
+  </div>
+
+  <!-- APP SHELL -->
+  <div class="app-shell">
+    <div class="app-toolbar">
+      <div class="toolbar-dot td-red"></div>
+      <div class="toolbar-dot td-yellow"></div>
+      <div class="toolbar-dot td-green"></div>
+      <div class="toolbar-title">vo-studio-pro.html</div>
+    </div>
+
+    <div class="app-body">
+      <!-- LEFT: TEXT INPUT -->
+      <div class="panel-left">
+        <div class="panel-header">
+          <div class="panel-header-icon">📝</div>
+          <div class="panel-label">Skrip</div>
+          <div class="char-count"><span id="charCount">0</span> karakter</div>
+        </div>
+        <textarea id="scriptText" placeholder="Ketik atau paste teks yang ingin dijadikan voice over di sini...&#10;&#10;Contoh: Halo semuanya! Selamat datang di channel aku. Hari ini kita akan belajar cara membuat konten yang viral di TikTok..."></textarea>
+        <div class="preset-bar">
+          <span class="preset-label">Contoh cepat:</span>
+          <button class="preset-chip" onclick="insertPreset('tiktok')">🔥 TikTok</button>
+          <button class="preset-chip" onclick="insertPreset('berita')">📺 Berita</button>
+          <button class="preset-chip" onclick="insertPreset('iklan')">💰 Iklan</button>
+          <button class="preset-chip" onclick="insertPreset('horor')">👻 Horor</button>
+          <button class="preset-chip" onclick="insertPreset('motivasi')">✨ Motivasi</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: CONTROLS -->
+      <div class="panel-right">
+        <div class="settings-scroll">
+
+          <!-- VOICE PREVIEW -->
+          <div class="voice-preview" id="voicePreview">
+            <div class="voice-avatar" id="voiceEmoji">👩</div>
+            <div class="voice-info">
+              <p id="voiceDisplayName">Ayu (Ceria & Enerjik)</p>
+              <span id="voiceApiName">Kore · Wanita</span>
+            </div>
+          </div>
+
+          <!-- VOICE SELECT -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">🗣️ Karakter Suara</div>
+            <select class="styled-select" id="voiceSelect" onchange="updateVoicePreview()"></select>
+          </div>
+
+          <!-- TONE SELECT -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">🎭 Emosi & Gaya</div>
+            <select class="styled-select" id="toneSelect"></select>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- SPEED -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">⏱️ Kecepatan Bicara</div>
+            <div class="toggle-row" id="speedGroup">
+              <button class="tgl" data-val="lambat" onclick="setToggle('speedGroup','lambat')">Lambat</button>
+              <button class="tgl on" data-val="normal" onclick="setToggle('speedGroup','normal')">Normal</button>
+              <button class="tgl" data-val="cepat" onclick="setToggle('speedGroup','cepat')">Cepat</button>
+            </div>
+          </div>
+
+          <!-- PITCH -->
+          <div class="ctrl-group">
+            <div class="ctrl-label">🎵 Nada Suara</div>
+            <div class="toggle-row" id="pitchGroup">
+              <button class="tgl" data-val="berat" onclick="setToggle('pitchGroup','berat')">Berat</button>
+              <button class="tgl on" data-val="normal" onclick="setToggle('pitchGroup','normal')">Normal</button>
+              <button class="tgl" data-val="tinggi" onclick="setToggle('pitchGroup','tinggi')">Tinggi</button>
+            </div>
+          </div>
+
+          <!-- ERROR -->
+          <div class="error-msg hidden" id="errorBox">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="errorText"></span>
+          </div>
+
+        </div>
+
+        <!-- GENERATE -->
+        <div class="gen-area">
+          <button class="btn-generate" id="genBtn" onclick="generateAudio()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            Generate Voice Over
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIO RESULT -->
+    <div class="audio-result" id="audioResult">
+      <div class="audio-result-header">
+        <div class="success-badge">
+          <div class="dot green"></div>
+          Berhasil dibuat!
+        </div>
+        <span style="font-size:12px;color:var(--text3);margin-left:8px;" id="audioMeta"></span>
+      </div>
+      <div class="audio-actions">
+        <audio id="audioPlayer" controls></audio>
+        <button class="btn-dl" onclick="downloadAudio()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Simpan WAV
+        </button>
+        <button class="btn-close-audio" onclick="closeAudio()">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section">
+    <div class="section-title">
+      Riwayat Audio
+      <span id="historyCount">0 file</span>
+      <button onclick="clearHistory()" style="margin-left:auto;background:transparent;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:var(--font-body);" id="clearHistBtn">Hapus Semua</button>
+    </div>
+    <div class="history-grid" id="historyList">
+      <div class="empty-history">
+        <span>🎙️</span>
+        Belum ada audio yang dibuat. Generate yang pertama!
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>VO Studio Pro · Dibuat dengan ❤️ menggunakan <a href="https://ai.google.dev" target="_blank">Gemini 2.5 Flash TTS</a></p>
+</footer>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Pengaturan API
+      </div>
+      <button class="btn-modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">Gemini API Key</div>
+        <input type="password" class="form-input" id="apiKeyInput" placeholder="AIzaSy..." autocomplete="off" />
+        <div class="form-hint">
+          Dapatkan API Key gratis di <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a><br/>
+          API Key disimpan di browser kamu dan <strong>tidak dikirim ke server manapun</strong>.
+        </div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.7;">
+        <strong style="color:var(--text);">ℹ️ Info penting:</strong><br/>
+        • API Key tersimpan <strong>permanen</strong> di browser (localStorage)<br/>
+        • Tidak perlu setting ulang meskipun browser ditutup<br/>
+        • Model: <code style="background:var(--bg4);padding:1px 5px;border-radius:4px;font-size:11px;">gemini-2.5-flash-preview-tts</code>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeSettings()">Batal</button>
+      <button class="btn-save" onclick="saveSettings()">💾 Simpan & Aktifkan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--green);"></div>
+  <span id="toastText"></span>
+</div>
+
+<script>
+// ===================== DATA =====================
+const VOICE_MAP = [
+  { apiName: 'Kore',       localName: 'Ayu (Ceria & Enerjik)',     gender: 'Wanita', emoji: '👩' },
+  { apiName: 'Aoede',      localName: 'Bunga (Lembut & Anggun)',   gender: 'Wanita', emoji: '👩' },
+  { apiName: 'Leda',       localName: 'Citra (Ramah & Kasual)',    gender: 'Wanita', emoji: '👩' },
+  { apiName: 'Callirrhoe', localName: 'Dian (Dewasa & Profesional)', gender: 'Wanita', emoji: '👩' },
+  { apiName: 'Despina',    localName: 'Eka (Tegas & Jelas)',       gender: 'Wanita', emoji: '👩' },
+  { apiName: 'Autonoe',    localName: 'Fitri (Muda & Antusias)',   gender: 'Wanita', emoji: '👩' },
+  { apiName: 'Erinome',    localName: 'Gita (Elegan & Tenang)',    gender: 'Wanita', emoji: '👩' },
+  { apiName: 'Charon',     localName: 'Bima (Berat & Berwibawa)',  gender: 'Pria',   emoji: '👨' },
+  { apiName: 'Puck',       localName: 'Rizky (Santai & Gaul)',     gender: 'Pria',   emoji: '👨' },
+  { apiName: 'Zephyr',     localName: 'Agus (Tegas & Lantang)',    gender: 'Pria',   emoji: '👨' },
+  { apiName: 'Fenrir',     localName: 'Fajar (Dalam & Misterius)', gender: 'Pria',   emoji: '👨' },
+  { apiName: 'Orus',       localName: 'Hendra (Formal & Berita)',  gender: 'Pria',   emoji: '👨' },
+  { apiName: 'Enceladus',  localName: 'Indra (Ramah & Hangat)',    gender: 'Pria',   emoji: '👨' },
+  { apiName: 'Iapetus',    localName: 'Joko (Klasik & Sabar)',     gender: 'Pria',   emoji: '👨' },
+];
+
+const TONES = [
+  { id: 'natural',   label: '😊 Natural & Santai',    prompt: 'Bacakan teks berikut dalam bahasa Indonesia yang natural, santai, dan jelas' },
+  { id: 'tiktok',    label: '🔥 Gaya TikTok / FYP',   prompt: 'Bacakan teks berikut dengan gaya kreator TikTok Indonesia yang enerjik, cepat, heboh, dan kekinian' },
+  { id: 'jaksel',    label: '☕ Anak Jaksel',           prompt: 'Bacakan teks berikut dengan logat santai seperti anak muda Jakarta Selatan yang sedang nongkrong' },
+  { id: 'hardsell',  label: '💰 Jualan / Promosi',     prompt: 'Bacakan teks berikut dengan gaya penjual atau SPG di Indonesia yang sangat antusias, semangat, dan membujuk' },
+  { id: 'berita',    label: '📺 Penyiar Berita TV',    prompt: 'Bacakan teks berikut dengan intonasi formal, tegas, dan berwibawa ala penyiar berita televisi nasional Indonesia' },
+  { id: 'horor',     label: '👻 Cerita Horor',         prompt: 'Bacakan teks berikut dengan nada suara pelan, berat, menakutkan, berbisik, dan misterius ala podcast horor Indonesia' },
+  { id: 'sedih',     label: '😭 Sedih & Dramatis',     prompt: 'Bacakan teks berikut dengan nada suara sedih, pelan, dan seolah mau menangis atau sangat dramatis' },
+  { id: 'ngegas',    label: '😡 Marah / Ngegas',       prompt: 'Bacakan teks berikut dengan nada suara tinggi, cepat, kesal, marah, dan ngegas ala netizen Indonesia' },
+  { id: 'motivasi',  label: '✨ Motivasi / Bijak',      prompt: 'Bacakan teks berikut dengan nada suara tenang, sabar, bijaksana, dan memotivasi pendengar' },
+  { id: 'jawa',      label: '🌾 Logat Jawa (Medok)',   prompt: 'Bacakan teks berikut dengan bahasa Indonesia tapi menggunakan logat yang sangat medok Jawa, pelan, dan ramah' },
+];
+
+const PRESETS = {
+  tiktok: 'Guys, dengerin dulu nih! Ada tips viral yang bakalan bikin konten kalian langsung FYP. Jangan skip, serius ini works banget!',
+  berita: 'Kami laporkan dari Jakarta. Pemerintah hari ini resmi mengumumkan kebijakan baru yang akan berdampak bagi seluruh masyarakat Indonesia.',
+  iklan: 'Hei! Kamu lagi nyari produk terbaik dengan harga terjangkau? Sekarang saatnya! Diskon spesial lima puluh persen hanya hari ini. Jangan sampai kehabisan!',
+  horor: 'Malam itu sunyi sekali. Aku mendengar langkah kaki di lantai atas... padahal aku tahu, rumah itu sudah kosong selama bertahun-tahun.',
+  motivasi: 'Ingatlah, setiap langkah kecil yang kamu ambil hari ini adalah fondasi dari kesuksesan besarmu. Jangan menyerah. Kamu lebih kuat dari yang kamu kira.',
+};
+
+// ===================== STATE =====================
+let selectedSpeed = 'normal';
+let selectedPitch = 'normal';
+let currentAudioUrl = null;
+let currentVoice = VOICE_MAP[0];
+let audioHistory = [];
+
+// ===================== INIT =====================
+(function init() {
+  // Populate voice select
+  const vs = document.getElementById('voiceSelect');
+  VOICE_MAP.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.apiName;
+    opt.textContent = v.emoji + ' ' + v.localName;
+    vs.appendChild(opt);
+  });
+
+  // Populate tone select
+  const ts = document.getElementById('toneSelect');
+  TONES.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.label;
+    ts.appendChild(opt);
+  });
+  ts.value = 'tiktok';
+
+  // Char count
+  document.getElementById('scriptText').addEventListener('input', function() {
+    document.getElementById('charCount').textContent = this.value.length;
+  });
+
+  // Load saved settings
+  const savedKey = localStorage.getItem('vo_api_key');
+  if (savedKey) {
+    document.getElementById('apiKeyInput').value = savedKey;
+    updateApiStatus(true);
+  }
+
+  // Load history
+  const saved = localStorage.getItem('vo_history');
+  if (saved) {
+    try { audioHistory = JSON.parse(saved); renderHistory(); } catch(e) {}
+  }
+
+  updateVoicePreview();
+})();
+
+// ===================== SETTINGS =====================
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('show');
+  document.getElementById('apiKeyInput').focus();
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('show');
+}
+function saveSettings() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { showToast('Masukkan API Key dulu!', false); return; }
+  localStorage.setItem('vo_api_key', key);
+  updateApiStatus(true);
+  closeSettings();
+  showToast('API Key berhasil disimpan!');
+}
+function updateApiStatus(ok) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  if (ok) { dot.classList.add('green'); txt.textContent = 'API Siap'; }
+  else { dot.classList.remove('green'); txt.textContent = 'API Belum Diset'; }
+}
+
+// ===================== VOICE PREVIEW =====================
+function updateVoicePreview() {
+  const apiName = document.getElementById('voiceSelect').value;
+  const v = VOICE_MAP.find(x => x.apiName === apiName) || VOICE_MAP[0];
+  currentVoice = v;
+  document.getElementById('voiceEmoji').textContent = v.emoji;
+  document.getElementById('voiceDisplayName').textContent = v.localName;
+  document.getElementById('voiceApiName').textContent = v.apiName + ' · ' + v.gender;
+}
+
+// ===================== TOGGLE =====================
+function setToggle(groupId, val) {
+  document.querySelectorAll('#' + groupId + ' .tgl').forEach(b => {
+    b.classList.toggle('on', b.dataset.val === val);
+  });
+  if (groupId === 'speedGroup') selectedSpeed = val;
+  else selectedPitch = val;
+}
+
+// ===================== PRESETS =====================
+function insertPreset(type) {
+  const ta = document.getElementById('scriptText');
+  ta.value = PRESETS[type] || '';
+  document.getElementById('charCount').textContent = ta.value.length;
+  // set matching tone
+  const toneMap = { tiktok:'tiktok', berita:'berita', iklan:'hardsell', horor:'horor', motivasi:'motivasi' };
+  if (toneMap[type]) document.getElementById('toneSelect').value = toneMap[type];
+}
+
+// ===================== PCM TO WAV =====================
+function pcmToWav(pcmData, sampleRate) {
+  const numChannels = 1, bitsPerSample = 16;
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = pcmData.byteLength;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4, 36+dataSize, true);
+  ws(8,'WAVE'); ws(12,'fmt ');
+  view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,numChannels,true); view.setUint32(24,sampleRate,true);
+  view.setUint32(28,byteRate,true); view.setUint16(32,blockAlign,true);
+  view.setUint16(34,bitsPerSample,true); ws(36,'data');
+  view.setUint32(40,dataSize,true);
+  new Uint8Array(buffer, 44).set(new Uint8Array(pcmData));
+  return buffer;
+}
+
+// ===================== GENERATE =====================
+async function generateAudio() {
+  const text = document.getElementById('scriptText').value.trim();
+  const apiKey = localStorage.getItem('vo_api_key');
+  const toneId = document.getElementById('toneSelect').value;
+  const voiceApiName = document.getElementById('voiceSelect').value;
+
+  hideError();
+
+  if (!apiKey) {
+    showError('API Key belum diset. Klik tombol "Pengaturan API" di atas.');
+    openSettings();
+    return;
+  }
+  if (!text) {
+    showError('Tuliskan skrip kamu dulu di panel kiri ya!');
+    return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">↻</span>&nbsp; Memproses...';
+
+  try {
+    const tone = TONES.find(t => t.id === toneId);
+    let mods = '';
+    if (selectedSpeed === 'cepat') mods += ' dengan tempo bicara yang cepat dan terburu-buru,';
+    else if (selectedSpeed === 'lambat') mods += ' dengan tempo bicara yang sangat pelan dan santai,';
+    if (selectedPitch === 'tinggi') mods += ' menggunakan nada suara yang melengking atau tinggi,';
+    else if (selectedPitch === 'berat') mods += ' menggunakan nada suara yang sangat berat, ngebass, atau rendah,';
+
+    const finalPrompt = `${tone.prompt}${mods}: "${text}"`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: finalPrompt }] }],
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceApiName } } }
+        }
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      const msg = errData?.error?.message || '';
+      if (res.status === 400 && msg.includes('API_KEY')) throw new Error('API Key tidak valid. Periksa kembali di Pengaturan.');
+      if (res.status === 429) throw new Error('Terlalu banyak request. Tunggu sebentar lalu coba lagi.');
+      if (res.status === 403) throw new Error('API Key tidak punya akses. Pastikan TTS sudah diaktifkan.');
+      throw new Error(msg || `HTTP error ${res.status}`);
+    }
+
+    const result = await res.json();
+    if (!result.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
+      throw new Error('Respon API tidak valid. Coba lagi.');
+    }
+
+    const { data: b64, mimeType } = result.candidates[0].content.parts[0].inlineData;
+    const sampleRate = parseInt((mimeType.match(/rate=(\d+)/) || [])[1] || '24000', 10);
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+    const wavBuf = pcmToWav(bytes.buffer, sampleRate);
+    const blob = new Blob([wavBuf], { type: 'audio/wav' });
+
+    if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+    currentAudioUrl = URL.createObjectURL(blob);
+
+    // Show player
+    const player = document.getElementById('audioPlayer');
+    player.src = currentAudioUrl;
+    player.play();
+
+    const voice = VOICE_MAP.find(v => v.apiName === voiceApiName);
+    document.getElementById('audioMeta').textContent =
+      `${voice?.emoji || ''} ${voice?.localName || voiceApiName} · ${tone.label} · ${selectedSpeed !== 'normal' ? selectedSpeed : ''} ${selectedPitch !== 'normal' ? selectedPitch : ''}`.trim();
+
+    const ar = document.getElementById('audioResult');
+    ar.classList.add('show');
+
+    // Save to history
+    addToHistory(text, blob, voice, tone);
+    showToast('Voice over berhasil dibuat!');
+
+  } catch (err) {
+    showError(err.message || 'Gagal menghubungi server. Coba lagi.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Generate Voice Over`;
+  }
+}
+
+// ===================== DOWNLOAD =====================
+function downloadAudio() {
+  if (!currentAudioUrl) return;
+  const a = document.createElement('a');
+  a.href = currentAudioUrl;
+  a.download = `VO_${currentVoice.localName.split(' ')[0]}_${Date.now()}.wav`;
+  a.click();
+}
+function closeAudio() {
+  document.getElementById('audioResult').classList.remove('show');
+}
+
+// ===================== HISTORY =====================
+function addToHistory(text, blob, voice, tone) {
+  const url = URL.createObjectURL(blob);
+  const item = {
+    id: Date.now(),
+    text: text.substring(0, 80),
+    voice: voice?.localName || '',
+    tone: tone?.label || '',
+    time: new Date().toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit', day:'numeric', month:'short' }),
+    url: url
+  };
+  audioHistory.unshift(item);
+  if (audioHistory.length > 20) audioHistory = audioHistory.slice(0, 20);
+  // Note: can't store blob URLs in localStorage, store meta only
+  const toSave = audioHistory.map(h => ({ ...h, url: null }));
+  try { localStorage.setItem('vo_history', JSON.stringify(toSave)); } catch(e) {}
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const count = document.getElementById('historyCount');
+  const clearBtn = document.getElementById('clearHistBtn');
+  count.textContent = audioHistory.length + ' file';
+  clearBtn.style.display = audioHistory.length > 0 ? '' : 'none';
+
+  if (audioHistory.length === 0) {
+    list.innerHTML = '<div class="empty-history"><span>🎙️</span>Belum ada audio yang dibuat. Generate yang pertama!</div>';
+    return;
+  }
+
+  list.innerHTML = audioHistory.map((item, i) => `
+    <div class="history-item">
+      <div class="history-num">${i + 1}</div>
+      <div class="history-text">
+        <p>${escHtml(item.text)}${item.text.length >= 80 ? '...' : ''}</p>
+        <span>${item.voice} · ${item.tone} · ${item.time}</span>
+      </div>
+      ${item.url ? `
+        <button class="history-play" onclick="playHistoryItem(${item.id})" title="Putar">▶</button>
+        <button class="history-dl" onclick="downloadHistoryItem(${item.id})" title="Download">⬇</button>
+      ` : `<span style="font-size:11px;color:var(--text3);">Sesi lalu</span>`}
+    </div>
+  `).join('');
+}
+
+function playHistoryItem(id) {
+  const item = audioHistory.find(h => h.id === id);
+  if (!item?.url) return;
+  const player = document.getElementById('audioPlayer');
+  player.src = item.url;
+  player.play();
+  document.getElementById('audioResult').classList.add('show');
+}
+
+function downloadHistoryItem(id) {
+  const item = audioHistory.find(h => h.id === id);
+  if (!item?.url) return;
+  const a = document.createElement('a');
+  a.href = item.url;
+  a.download = `VO_${item.voice.split(' ')[0]}_${item.id}.wav`;
+  a.click();
+}
+
+function clearHistory() {
+  if (!confirm('Hapus semua riwayat audio?')) return;
+  audioHistory.forEach(h => { if (h.url) URL.revokeObjectURL(h.url); });
+  audioHistory = [];
+  localStorage.removeItem('vo_history');
+  renderHistory();
+  showToast('Riwayat dihapus.');
+}
+
+// ===================== ERROR / TOAST =====================
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  document.getElementById('errorText').textContent = msg;
+  box.classList.remove('hidden');
+}
+function hideError() {
+  document.getElementById('errorBox').classList.add('hidden');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastText').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===================== UTILS =====================
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modal on overlay click
+document.getElementById('settingsModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+// Auto-open settings if no key
+window.addEventListener('load', () => {
+  if (!localStorage.getItem('vo_api_key')) {
+    setTimeout(openSettings, 600);
+  }
+});
+</script>
+</body>
+</html>

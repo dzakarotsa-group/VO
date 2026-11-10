@@ -653,7 +653,7 @@
         <audio id="audioPlayer" controls></audio>
         <button class="btn-dl" onclick="downloadAudio()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Simpan WAV
+          Simpan MP3
         </button>
         <button class="btn-close-audio" onclick="closeAudio()">✕</button>
       </div>
@@ -721,6 +721,7 @@
   <span id="toastText"></span>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 <script>
 // ===================== DATA =====================
 const VOICE_MAP = [
@@ -733,7 +734,7 @@ const VOICE_MAP = [
   { apiName: 'Erinome',    localName: 'Gita (Elegan & Tenang)',    gender: 'Wanita', emoji: '👩' },
   { apiName: 'Charon',     localName: 'Bima (Berat & Berwibawa)',  gender: 'Pria',   emoji: '👨' },
   { apiName: 'Puck',       localName: 'Rizky (Santai & Gaul)',     gender: 'Pria',   emoji: '👨' },
-  { apiName: 'Zephyr',     localName: 'Agus (Tegas & Lantang)',    gender: 'Pria',   emoji: '👨' },
+  { apiName: 'Zephyr',     localName: 'Michelle (Tegas & Lantang)',    gender: 'Pria',   emoji: '👨' },
   { apiName: 'Fenrir',     localName: 'Fajar (Dalam & Misterius)', gender: 'Pria',   emoji: '👨' },
   { apiName: 'Orus',       localName: 'Hendra (Formal & Berita)',  gender: 'Pria',   emoji: '👨' },
   { apiName: 'Enceladus',  localName: 'Indra (Ramah & Hangat)',    gender: 'Pria',   emoji: '👨' },
@@ -862,24 +863,28 @@ function insertPreset(type) {
   if (toneMap[type]) document.getElementById('toneSelect').value = toneMap[type];
 }
 
-// ===================== PCM TO WAV =====================
-function pcmToWav(pcmData, sampleRate) {
-  const numChannels = 1, bitsPerSample = 16;
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const byteRate = sampleRate * blockAlign;
-  const dataSize = pcmData.byteLength;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-  const ws = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
-  ws(0,'RIFF'); view.setUint32(4, 36+dataSize, true);
-  ws(8,'WAVE'); ws(12,'fmt ');
-  view.setUint32(16,16,true); view.setUint16(20,1,true);
-  view.setUint16(22,numChannels,true); view.setUint32(24,sampleRate,true);
-  view.setUint32(28,byteRate,true); view.setUint16(32,blockAlign,true);
-  view.setUint16(34,bitsPerSample,true); ws(36,'data');
-  view.setUint32(40,dataSize,true);
-  new Uint8Array(buffer, 44).set(new Uint8Array(pcmData));
-  return buffer;
+// ===================== PCM TO MP3 =====================
+function pcmToMp3(pcmData, sampleRate) {
+  if (!window.lamejs?.Mp3Encoder) {
+    throw new Error('Encoder MP3 gagal dimuat. Periksa koneksi internet lalu coba lagi.');
+  }
+  if (pcmData.byteLength % 2 !== 0) {
+    throw new Error('Data audio dari server tidak valid.');
+  }
+
+  const encoder = new lamejs.Mp3Encoder(1, sampleRate, 128);
+  const samples = new Int16Array(pcmData);
+  const chunks = [];
+  const blockSize = 1152;
+
+  for (let i = 0; i < samples.length; i += blockSize) {
+    const encoded = encoder.encodeBuffer(samples.subarray(i, i + blockSize));
+    if (encoded.length > 0) chunks.push(new Uint8Array(encoded));
+  }
+
+  const finalChunk = encoder.flush();
+  if (finalChunk.length > 0) chunks.push(new Uint8Array(finalChunk));
+  return new Blob(chunks, { type: 'audio/mpeg' });
 }
 
 // ===================== GENERATE =====================
@@ -948,8 +953,7 @@ async function generateAudio() {
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
 
-    const wavBuf = pcmToWav(bytes.buffer, sampleRate);
-    const blob = new Blob([wavBuf], { type: 'audio/wav' });
+    const blob = pcmToMp3(bytes.buffer, sampleRate);
 
     if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
     currentAudioUrl = URL.createObjectURL(blob);
@@ -957,11 +961,18 @@ async function generateAudio() {
     // Show player
     const player = document.getElementById('audioPlayer');
     player.src = currentAudioUrl;
-    player.play();
+    player.load();
+    player.play().catch(err => {
+      if (err.name === 'NotAllowedError') {
+        showToast('MP3 siap diputar. Tekan tombol putar pada pemutar audio.');
+      } else {
+        showError('MP3 berhasil dibuat, tetapi tidak dapat diputar di browser ini.');
+      }
+    });
 
     const voice = VOICE_MAP.find(v => v.apiName === voiceApiName);
     document.getElementById('audioMeta').textContent =
-      `${voice?.emoji || ''} ${voice?.localName || voiceApiName} · ${tone.label} · ${selectedSpeed !== 'normal' ? selectedSpeed : ''} ${selectedPitch !== 'normal' ? selectedPitch : ''}`.trim();
+      `${voice?.emoji || ''} ${voice?.localName || voiceApiName} · MP3 · ${tone.label} · ${selectedSpeed !== 'normal' ? selectedSpeed : ''} ${selectedPitch !== 'normal' ? selectedPitch : ''}`.trim();
 
     const ar = document.getElementById('audioResult');
     ar.classList.add('show');
@@ -983,7 +994,7 @@ function downloadAudio() {
   if (!currentAudioUrl) return;
   const a = document.createElement('a');
   a.href = currentAudioUrl;
-  a.download = `VO_${currentVoice.localName.split(' ')[0]}_${Date.now()}.wav`;
+  a.download = `VO_${currentVoice.localName.split(' ')[0]}_${Date.now()}.mp3`;
   a.click();
 }
 function closeAudio() {
@@ -1002,7 +1013,10 @@ function addToHistory(text, blob, voice, tone) {
     url: url
   };
   audioHistory.unshift(item);
-  if (audioHistory.length > 20) audioHistory = audioHistory.slice(0, 20);
+  if (audioHistory.length > 20) {
+    audioHistory.slice(20).forEach(item => { if (item.url) URL.revokeObjectURL(item.url); });
+    audioHistory = audioHistory.slice(0, 20);
+  }
   // Note: can't store blob URLs in localStorage, store meta only
   const toSave = audioHistory.map(h => ({ ...h, url: null }));
   try { localStorage.setItem('vo_history', JSON.stringify(toSave)); } catch(e) {}
@@ -1050,7 +1064,7 @@ function downloadHistoryItem(id) {
   if (!item?.url) return;
   const a = document.createElement('a');
   a.href = item.url;
-  a.download = `VO_${item.voice.split(' ')[0]}_${item.id}.wav`;
+  a.download = `VO_${item.voice.split(' ')[0]}_${item.id}.mp3`;
   a.click();
 }
 
